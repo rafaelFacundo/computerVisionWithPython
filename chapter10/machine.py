@@ -1,7 +1,12 @@
 import cv2
 import numpy as np
 
-from random import randint, uniform
+import gzip
+import pickle
+
+
+
+#from random import randint, uniform
 
 # Introduction to Neural Networks with OpenCV
 
@@ -139,7 +144,7 @@ from random import randint, uniform
 # 
 
 # untrained ANN
-ann = cv2.ml.ANN_MLP_create()
+""" ann = cv2.ml.ANN_MLP_create()
 
 ann.setLayerSizes(np.array([9,15,9], np.uint8))
 
@@ -161,7 +166,7 @@ test_samples = np.array(
     [[1.4, 1.5, 1.2, 2.0, 2.5, 2.8, 3.0, 3.1, 3.8]], np.float32)
 prediction = ann.predict(test_samples)
 print(prediction)
-
+ """
 # Training an ANN classifier in multiple epochs
 
 # Let's create an ANN that attempts to classify animals based on three measurements: weight,
@@ -169,21 +174,21 @@ print(prediction)
 # describe an animal with just these three statistics. However, our intent is to improve our
 # understanding of ANNs before we start applying them to image data.
 
-animals_net = cv2.ml.ANN_MLP_create()
+""" animals_net = cv2.ml.ANN_MLP_create()
 animals_net.setLayerSizes(np.array([3, 50, 4]))
 animals_net.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM, 0.6,
 1.0)
 animals_net.setTrainMethod(cv2.ml.ANN_MLP_BACKPROP, 0.1, 0.1)
 animals_net.setTermCriteria(
     (cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS, 100, 1.0))
-
+ """
 """Input arrays
 weight, length, teeth
 """
 """Output arrays
 dog, condor, dolphin, dragon
 """
-def dog_sample():
+""" def dog_sample():
     return [uniform(10.0, 20.0), uniform(1.0, 1.5),randint(38, 42)]
 
 def dog_class():
@@ -268,5 +273,104 @@ print("condor accuracy: %.2f%%" % (100.0 * condor_results / TESTS))
 print("dolphin accuracy: %.2f%%" % \
 (100.0 * dolphin_results / TESTS))
 print("dragon accuracy: %.2f%%" % (100.0 * dragon_results / TESTS))
-
+ """
 # Recognizing handwritten digits with an ANN
+
+# a handwritten digit is any of the 10 arabic numerals
+# written manually with a pen or pencial
+# because of it, the appearance of handwritten digits
+# can vary significantly
+# so almost anybody can write exactly the same way the digits
+# this variability makes the problem of recognizing hand written
+# digits a non-trivial problem for machine learning
+# we will approach this challenge in the following 
+# manner:
+#   1 load data from a python friendly version of the MNIST database
+#       this is a widely used database containing images of handwritten digits
+#   2 using the MNIST data, train an ANN in multiples epochs
+#   3 Load an image of a sheer of paper with many handwritten digits on it
+#   4 based on contour analysis, detect the individual digits on the paper
+#   5 Use our ANN to classify the detected digits
+#   6 Review the results in order to determine the accuracy of our detector and our
+#       ann-based classifier
+#   
+
+def load_data():
+    mnist = gzip.open('mnist.pkl.gz', 'rb')
+    training_data, test_data = pickle.load(mnist)
+    mnist.close()
+    return (training_data, test_data)
+
+def vectorized_result(j):
+    e = np.zeros((10,), np.float32)
+    e[j] = 1.0
+    return e
+
+def wrap_data():
+    tr_d, te_d = load_data()
+    training_inputs = tr_d[0]
+    training_results = [vectorized_result(y) for y in tr_d[1]]
+    training_data = zip(training_inputs, training_results)
+    test_data = zip(te_d[0], te_d[1])
+    return (training_data, test_data)
+
+def create_ann(hidden_nodes=60):
+    ann = cv2.ml.ANN_MLP_create()
+    ann.setLayerSizes(np.array([784, hidden_nodes, 10]))
+    ann.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM, 0.6, 1.0)
+    ann.setTrainMethod(cv2.ml.ANN_MLP_BACKPROP, 0.1, 0.1)
+    ann.setTermCriteria(
+    (cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,
+    100, 1.0))
+    return ann
+
+def train(ann, samples=50000, epochs=10):
+    tr, test = wrap_data()
+    # Convert iterator to list so that we can iterate multiple
+    # times in multiple epochs.
+    tr = list(tr)
+
+    for epoch in range(epochs):
+        print("Completed %d/%d epochs" % (epoch, epochs))
+        counter = 0
+        for img in tr:
+            if (counter > samples):
+                break
+            if (counter % 1000 == 0):
+                print("Epoch %d: Trained on %d/%d samples" % \
+                    (epoch, counter, samples))
+            counter += 1
+            sample, response = img
+            data = cv2.ml.TrainData_create(
+                np.array([sample], dtype=np.float32),
+                cv2.ml.ROW_SAMPLE,
+                np.array([response], dtype=np.float32))
+            if ann.isTrained():
+                ann.train(data, cv2.ml.ANN_MLP_UPDATE_WEIGHTS |
+                cv2.ml.ANN_MLP_NO_INPUT_SCALE | cv2.ml.ANN_MLP_NO_OUTPUT_SCALE)
+            else:
+                ann.train(data, cv2.ml.ANN_MLP_NO_INPUT_SCALE |
+                    cv2.ml.ANN_MLP_NO_OUTPUT_SCALE)
+    print("Completed all epochs!")
+
+    return ann, test
+
+def predict(ann, sample):
+    if sample.shape != (784,):
+        if sample.shape != (28, 28):
+            sample = cv2.resize(sample, (28, 28),
+                interpolation=cv2.INTER_LINEAR)
+        sample = sample.reshape(784,)
+    return ann.predict(np.array([sample], dtype=np.float32))
+
+def test(ann, test_data):
+    num_tests = 0
+    num_correct = 0
+    for img in test_data:
+        num_tests += 1
+        sample, correct_digit_class = img
+        digit_class = predict(ann, sample)[0]
+        if digit_class == correct_digit_class:
+            num_correct += 1
+    print('Accuracy: %.2f%%' % (100.0 * num_correct / num_tests))
+
