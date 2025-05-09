@@ -2,9 +2,9 @@ import os
 import cv2
 import glob
 
-def labelFrameYesOrNo(videoPath):
+def labelFrameYesOrNo(videoPath, resutlFolderName):
     video = cv2.VideoCapture(videoPath);
-    pathToSaveFrames = f"{videoPath}/frames"
+    pathToSaveFrames = f"{videoPath}/{resutlFolderName}"
     os.makedirs(pathToSaveFrames, exist_ok=True)
     index = 0;
     while video.isOpened():

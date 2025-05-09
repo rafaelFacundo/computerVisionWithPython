@@ -1,2 +1,5 @@
 *.avi
 *.pgm
+
+/footballProject/videos
+/footballProject/framesLabeled

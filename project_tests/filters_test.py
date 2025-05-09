@@ -23,53 +23,28 @@ scaleFactor_y_axis = 0.7;
 
 frameResized = cv2.resize(
     frame, 
-    None, 
-    fx=scaleFactor_X_axis, 
-    fy=scaleFactor_y_axis,
+    (320,320), 
     interpolation=cv2.INTER_LINEAR
 )
 
 frameResizedGray = cv2.cvtColor(frameResized, cv2.COLOR_BGR2GRAY);
 
-frameResizedGrayBlurred = cv2.GaussianBlur(frameResizedGray, (3,3), 1);
+frameResizedGrayBlurred = cv2.GaussianBlur(frameResizedGray, (5,5), 1);
 
 frameResizedGrayBlurredWithGameCorrection = gammaCorrection(frameResizedGrayBlurred, 0.4);
 
 frameResizedGrayBlurredWithGameCorrectionAndMedianBlur = cv2.medianBlur(
     frameResizedGrayBlurredWithGameCorrection,
-    3
+    1
 )
 
 cannyEdges = cv2.Canny(
     frameResizedGrayBlurredWithGameCorrectionAndMedianBlur,
-    50,
+    30,
     12
 )
 
 
-minLineLength = 1
-maxLineGap = 90
-
-lines = cv2.HoughLinesP(
-    cannyEdges,
-    3, 
-    np.pi/180.0,
-    90,
-    minLineLength, 
-    maxLineGap
-)
-
-for x1, y1, x2,y2 in lines[0]:
-    print(x1,y1,x2,y2)
-    cv2.line(
-        frameResized,
-        (x1, y1),
-        (x2, y2),
-        (0,255,0),
-        4
-    )
-
-
-cv2.imshow('frame', frameResized);
+cv2.imshow('frame', cannyEdges);
 cv2.waitKey();
 cv2.destroyAllWindows();
