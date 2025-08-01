@@ -23,28 +23,39 @@ scaleFactor_y_axis = 0.7;
 
 frameResized = cv2.resize(
     frame, 
-    (320,320), 
+    (420,420), 
     interpolation=cv2.INTER_LINEAR
 )
 
-frameResizedGray = cv2.cvtColor(frameResized, cv2.COLOR_BGR2GRAY);
+frameResizedGray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY);
 
 frameResizedGrayBlurred = cv2.GaussianBlur(frameResizedGray, (5,5), 1);
 
-frameResizedGrayBlurredWithGameCorrection = gammaCorrection(frameResizedGrayBlurred, 0.4);
+frameResizedGrayBlurredWithGameCorrection = gammaCorrection(
+    frameResizedGrayBlurred,
+    0.5
+);
 
 frameResizedGrayBlurredWithGameCorrectionAndMedianBlur = cv2.medianBlur(
     frameResizedGrayBlurredWithGameCorrection,
-    1
+    5
 )
+
+#_, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+
 
 cannyEdges = cv2.Canny(
     frameResizedGrayBlurredWithGameCorrectionAndMedianBlur,
-    30,
-    12
+    50,
+    100
 )
 
+kernel = np.ones((3,1),np.uint8)
 
-cv2.imshow('frame', cannyEdges);
+cv2.imwrite("teste.jpg", cannyEdges)
+
+erosion = cv2.dilate(cannyEdges, kernel, iterations=1)
+
+cv2.imshow('frame', binary);
 cv2.waitKey();
 cv2.destroyAllWindows();
